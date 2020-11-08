@@ -15,6 +15,7 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import com.example.listview.Model.LanguageInfo;
+import com.example.listview.Utility.DbHelper;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.text.ParseException;
@@ -38,7 +39,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         toDoList=(ListView) findViewById(R.id.lstToDo);
 
         fab=(FloatingActionButton)findViewById(R.id.fab);
-        GenerateList();
+        //Get Data from list
+        //GenerateList();
         //One Line Array
         /*
         //context,Layout,Array
@@ -48,6 +50,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         toDoList=(ListView) findViewById(R.id.lstToDo);
         toDoList.setAdapter(adapter);
         */
+
+        try {
+            //Get Data from sqlLite
+            GetAllData();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
         adapter=new LanguageAdapter(this,arrayList);
         toDoList.setAdapter(adapter);
         toDoList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -63,6 +72,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         fab.setOnClickListener(this);
     }
 
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        try {
+            GetAllData();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public  void GetAllData() throws ParseException {
+        DbHelper dbHelper=new DbHelper(MainActivity.this);
+        arrayList= dbHelper.GetAll();
+    }
     private void GenerateList()
     {
         for (int i=0;i<2;i++)
@@ -111,6 +134,78 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onClick(View view) {
+        switch (view.getId())
+        {
+            case R.id.fab:
+                tmpPosition=-9;
+                showPopupDialog(null);
+                break;
+            case R.id.btnSave:
+                //Code to insert Here
+                String name=txtName.getText().toString();
+                String desc=txtDesc.getText().toString();
+                String releaseDate=txtDate.getText().toString();
+
+                int id=Integer.parseInt(txtid.getText().toString());
+
+                LanguageInfo info=new LanguageInfo();
+                if(tmpPosition>=0)
+                {
+                    info=arrayList.get(tmpPosition);
+                }
+                info.setId(id);
+                info.setName(name);
+                info.setDescription(desc);
+
+                SimpleDateFormat df=new SimpleDateFormat("yyyy-MM-dd");
+                try {
+                    info.setReleaseDate(df.parse(releaseDate));
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+
+                //Insert to Database
+                DbHelper db = new DbHelper(this);
+
+                if(tmpPosition<0) { //ForNew Data
+                    id = db.Insert(info);
+                    info.setId(id);
+                    arrayList.add(info);
+                }
+                else //For Update Data
+                {
+                    db.Update(info);
+                }
+
+                adapter.notifyDataSetChanged();
+                alertDialog.hide();
+                tmpPosition=-9;
+                break;
+            case R.id.btnCancel:
+                tmpPosition=-9;
+                alertDialog.cancel();
+                break;
+            case R.id.btnDelete:
+                int deletedid=Integer.parseInt(txtid.getText().toString());
+                if(deletedid<0)
+                {
+                    return;
+                }
+                else
+                {
+                    if(tmpPosition>=0)
+                    {
+                        arrayList.remove(tmpPosition);
+                        adapter.notifyDataSetChanged();
+                    }
+                }
+                alertDialog.hide();
+                tmpPosition=-9;
+                break;
+        }
+    }
+
+    public void onClickold(View view) {
         switch (view.getId())
         {
              case R.id.fab:
